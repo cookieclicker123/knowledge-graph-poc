@@ -1,31 +1,60 @@
 import os
 from dotenv import load_dotenv
 from openai import OpenAI
+from typing import Dict, Set, Optional
+import re
 
 load_dotenv()
 
 class GPTService:
-    def __init__(self):
+    def __init__(self, data_path: str = "test/fixtures/clean_data.csv"):
         self.client = OpenAI()  # Will automatically use OPENAI_API_KEY from env
         self.model = "gpt-4-turbo-preview"
+        self.company_mappings = self._build_company_mappings(data_path)
 
-    def get_completion(self, prompt: str) -> str:
-        """Get a completion from GPT-4 Turbo"""
-        if not prompt or not isinstance(prompt, str):
-            raise ValueError("Prompt must be a non-empty string")
+    def _build_company_mappings(self, data_path: str) -> Dict[str, str]:
+        """Build mappings of company name variations from the CSV data"""
+        import pandas as pd
+        
+        df = pd.read_csv(data_path)
+        companies = set(df['company'].dropna().unique())
+        
+        mappings = {}
+        for company in companies:
+            # Full name
+            mappings[company.lower()] = company
             
-        try:
-            response = self.client.chat.completions.create(
-                model=self.model,
-                messages=[
-                    {"role": "system", "content": "You are a helpful assistant that helps parse queries about people, their work, languages, and locations."},
-                    {"role": "user", "content": prompt}
-                ],
-                temperature=0.1
-            )
-            return response.choices[0].message.content
-        except Exception as e:
-            raise ConnectionError(f"Failed to get GPT completion: {str(e)}")
+            # Without suffixes
+            base_name = re.sub(r'\s+(?:Inc|Ltd|LLC|Limited|Corp|Corporation|India|UK|US)\.?\s*$', '', company)
+            if base_name != company:
+                mappings[base_name.lower()] = company
+            
+            # Abbreviations for multi-word companies
+            words = base_name.split()
+            if len(words) > 1:
+                # Standard abbreviation (first letters)
+                abbrev = ''.join(word[0] for word in words)
+                mappings[abbrev.lower()] = company
+                
+                # First word only (e.g., "Capgemini" from "Capgemini India")
+                mappings[words[0].lower()] = company
+        
+        return mappings
+
+    def normalize_company_name(self, company: str) -> str:
+        """Find the best matching company name from our known companies"""
+        company_lower = company.lower()
+        
+        # Direct match
+        if company_lower in self.company_mappings:
+            return self.company_mappings[company_lower]
+        
+        # Partial match
+        for known_name, canonical_name in self.company_mappings.items():
+            if known_name in company_lower or company_lower in known_name:
+                return canonical_name
+        
+        return company
 
     def parse_query(self, query_text: str) -> list[tuple[str, str, str]]:
         """Parse a natural language query into graph query conditions"""
@@ -40,14 +69,21 @@ class GPTService:
         - LIVES_IN (for countries) - Use for: based in, located in, resides in
         - STUDIED_AT (for universities) - Use for: graduated from, attended, studied at
         
-        For unsupported operations (like counting, averaging, statistics), return exactly: "ERROR: Unsupported query type"
+        Special cases:
+        - Terms like "developer", "dev", "engineer" → ("Person", "WORKS_IN", "Software Development")
+        - Company abbreviations: "MS" → "Microsoft"
         
         Examples:
-        "Find people who speak English and work at Microsoft"
-        → [("Person", "SPEAKS", "English"), ("Person", "WORKS_AT", "Microsoft")]
+        "Find developers"
+        → [("Person", "WORKS_IN", "Software Development")]
         
-        "What's the average age of employees?"
-        → "ERROR: Unsupported query type"
+        "Find people at MS"
+        → [("Person", "WORKS_AT", "Microsoft")]
+        
+        "Find developers who speak English"
+        → [("Person", "WORKS_IN", "Software Development"), ("Person", "SPEAKS", "English")]
+        
+        Important: Always return a valid Python list of tuples that can be evaluated with eval().
         """
         
         try:
@@ -90,9 +126,11 @@ class GPTService:
                     "STUDIED_AT": str.title,    # University Name
                 }
                 
-                # Apply standardization
+                # Apply standardization with dynamic company normalization
                 standardized_conditions = []
                 for subject, relation, obj in conditions:
+                    if relation == "WORKS_AT":
+                        obj = self.normalize_company_name(obj)
                     if relation in standardization_rules:
                         obj = standardization_rules[relation](obj)
                     standardized_conditions.append((subject, relation, obj))
