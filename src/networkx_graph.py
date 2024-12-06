@@ -51,9 +51,21 @@ def create_graph(csv_path: str) -> QueryGraph:
             matches_all = True
             for subject, relation, object in query.conditions:
                 edges = list(G.out_edges(node, data=True))
-                if not any(edge[1] == object and edge[2]['relation'] == relation for edge in edges):
-                    matches_all = False
-                    break
+                if relation == "SPEAKS":
+                    # Special handling for language matching
+                    if not any(
+                        (edge[1].lower() == object.lower() or 
+                         edge[1] == object or 
+                         edge[1] in ['Inglês', 'English'] and object in ['Inglês', 'English'])
+                        and edge[2]['relation'] == relation 
+                        for edge in edges
+                    ):
+                        matches_all = False
+                        break
+                else:
+                    if not any(edge[1] == object and edge[2]['relation'] == relation for edge in edges):
+                        matches_all = False
+                        break
             if matches_all:
                 matching_names.append(node)
         

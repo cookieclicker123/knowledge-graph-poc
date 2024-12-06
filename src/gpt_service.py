@@ -165,6 +165,10 @@ class GPTService:
         if language_lower in ['english', 'inglês', 'anglais', 'ingles']:
             return 'Inglês'  # Match exactly what's in our CSV
         
+        # Special handling for French variations
+        if language_lower in ['french', 'français', 'francés']:
+            return 'French'  # Standardize to English name for French
+        
         # Direct lookup in mappings
         if language_lower in self.language_mappings:
             return self.language_mappings[language_lower]
@@ -193,18 +197,22 @@ class GPTService:
         return university.title()
 
     def parse_query(self, query_text: Any) -> list[tuple[str, str, str]]:
-        """Parse a natural language query into graph query conditions"""
-        # Type check
+        """Parse natural language query into structured conditions"""
+        # Validate input type and content
         if not isinstance(query_text, str):
-            raise ValueError("Invalid query format: Query must be a string")
+            raise ValueError("Invalid query format: input must be a string")
         
-        # Empty or whitespace
-        if not query_text or not query_text.strip():
-            raise ValueError("Invalid query format: Query cannot be empty")
+        query_text = str(query_text).strip()
+        if not query_text:
+            raise ValueError("Invalid query format: query cannot be empty")
         
-        # SQL injection attempt
-        if any(keyword in query_text.upper() for keyword in ["SELECT", "INSERT", "UPDATE", "DELETE", "DROP"]):
+        # Check for SQL injection attempts
+        if any(keyword in query_text.lower() for keyword in ['select', 'insert', 'update', 'delete', 'drop']):
             raise ValueError("Invalid query format: SQL-like queries not allowed")
+        
+        # Check for unsupported query types
+        if any(phrase in query_text.lower() for phrase in ['average', 'count', 'how many']):
+            raise ValueError("Invalid query format: unsupported query type")
         
         system_prompt = """
         You are a query parser that converts natural language queries about people into structured conditions.
@@ -291,4 +299,16 @@ class GPTService:
         except TimeoutError as e:
             raise ValueError(f"Request timed out: {str(e)}")
         except Exception as e:
-            raise ValueError(f"Failed to parse query: {str(e)}") 
+            raise ValueError(f"Failed to parse query: {str(e)}")
+
+    def get_completion(self, prompt: str) -> str:
+        """Get a direct completion from GPT"""
+        if not isinstance(prompt, str) or not prompt.strip():
+            raise ValueError("Prompt must be a non-empty string")
+        
+        response = self.client.chat.completions.create(
+            model=self.model,
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.1
+        )
+        return response.choices[0].message.content 

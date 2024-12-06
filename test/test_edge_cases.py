@@ -37,10 +37,10 @@ def test_partial_company_names():
 def test_mixed_language_queries():
     """Test queries mixing languages and other conditions"""
     gpt_service = GPTService()
-    query = "Find developers who speak English and Japanese in Canada"  # We have this in our data
+    query = "Find developers who speak English and Japanese in Canada"
     
     parsed = gpt_service.parse_query(query)
-    assert ("Person", "SPEAKS", "English") in parsed
+    assert ("Person", "SPEAKS", "Inglês") in parsed
     assert ("Person", "SPEAKS", "Japanese") in parsed
     assert ("Person", "WORKS_IN", "Software Development") in parsed
     assert ("Person", "LIVES_IN", "Canada") in parsed
@@ -69,11 +69,11 @@ def test_case_insensitive_matching():
     
     results = [gpt_service.parse_query(q) for q in queries]
     expected = [
-        ("Person", "SPEAKS", "English"),
+        ("Person", "SPEAKS", "Inglês"),
         ("Person", "WORKS_AT", "Microsoft")
     ]
     
-    assert all(all(condition in result for condition in expected) for result in results) 
+    assert all(all(condition in result for condition in expected) for result in results)
 
 def debug_gpt_response():
     """Debug helper to see raw GPT responses"""
