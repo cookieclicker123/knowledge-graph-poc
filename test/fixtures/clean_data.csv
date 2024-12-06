@@ -1,8 +1,8 @@
-id,name,company,education,languages,industry,country
+id,name,company,university,languages,industry,country
 paul-lukes-906608134,Paul Lukes,Toolbox Creative,California College of the Arts,English|Czech,Advertising Services,United States
 roberto-merola-baa923103,Roberto Merola,Capgemini,Université libre de Bruxelles,English|Italian|French|Dutch|German,IT Services and IT Consulting,Belgium
 minju-hong-bsn-rn-1a7801239,"Minju Hong, BSN, RN",University of Washington Medical Center,University of Washington School of Nursing,Korean|English,Hospitals and Health Care,United States
-prateek-chitpur-710a1a12a,Prateek Chitpur,George Mason University,George Mason University Education George Mason University George Mason University Master's degreeData Analytics Engineering3.75 / 4 2019 - 2021 Visvesvaraya Technological University Visvesvaraya Technological University Bachelor's degreeComputer Science and Engineering 2014 - 2018,English|Hindi|Marathi|Kannada|Telugu,Higher Education,United States
+prateek-chitpur-710a1a12a,Prateek Chitpur,George Mason University,George Mason University,English|Hindi|Marathi|Kannada|Telugu,Higher Education,United States
 aadcampos,Alexandre Campos,Serpro - Serviço Federal de Processamento de Dados,Unichristus,English,IT Services and IT Consulting,Brazil
 gareth-reid-75966110b,Gareth Reid,Willis Towers Watson,University of Leicester,English|French|Spanish,Financial Services,United Kingdom
 alaa-el-said-56740659,Alaa El-said,Microsoft,Mansoura University,Arabic|English,Software Development,Saudi Arabia
@@ -20,7 +20,7 @@ vitaly-nhuien,Vitaly Nhuien,BMO Financial Group,Seneca College of Applied Arts a
 amithabh-roy-4752806,Amithabh Roy,Team Taurus,Indian Institute of Management Bangalore,English|Tamil|Hindi|Bangla,Real Estate,India
 dhwani-joshi-,Dhwani Joshi,Excel Tutoring,University of Calgary,Gujarati|Hindi|English,Higher Education,Canada
 fanny-hartmann-194ab469,Fanny Hartmann,Université Paris-Saclay,ETH Zürich,French|English|Spanish|German,Higher Education,France
-ken-hoffman-553587101,Ken Hoffman,Coldwell Banker - The Real Estate Group,Education Lincoln-Way East High School High SchoolGeneral Studies 2008 - 2011 Received my High-School Diploma Joliet Junior College Joliet Junior College General Studies 2011 - 2013,English,Real Estate,Greater Chicago Area
+ken-hoffman-553587101,Ken Hoffman,Coldwell Banker - The Real Estate Group,Lincoln-Way East High School,English,Real Estate,Greater Chicago Area
 calderonlauren,Lauren Calderon,Optoro,Berkeley College,English,Software Development,United States
 kane-ogle-576580101,Kane Ogle,Woodbury,Oklahoma State University,English,Financial Services,United States
 evan-l-graham-phd-b52428159,"Evan L. Graham, PhD",Biosero,Cornell University,English|Swedish|Spanish,Software Development,Greater Boston

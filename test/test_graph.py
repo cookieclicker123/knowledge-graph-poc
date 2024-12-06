@@ -8,14 +8,14 @@ import pytest
 
 def test_create_graph():
     # Arrange
-    graph_fn = create_graph("test_data.csv")
+    graph_fn = create_graph("test/fixtures/clean_data.csv")
     
     # Assert
     assert callable(graph_fn)
 
 def test_find_microsoft_english_speakers():
     # Arrange
-    graph_fn = create_graph("test_data.csv")
+    graph_fn = create_graph("test/fixtures/clean_data.csv")
     query = Query(
         conditions=[
             ("Person", "WORKS_AT", "Microsoft"),
@@ -29,12 +29,11 @@ def test_find_microsoft_english_speakers():
     # Assert
     assert isinstance(result, QueryResult)
     assert len(result.matches) > 0
-    # Assuming we have test data with at least one person matching these criteria
     assert any(person for person in result.matches)
 
 def test_empty_result_for_invalid_query():
     # Arrange
-    graph_fn = create_graph("test_data.csv")
+    graph_fn = create_graph("test/fixtures/clean_data.csv")
     query = Query(
         conditions=[
             ("Person", "WORKS_AT", "NonExistentCompany"),
