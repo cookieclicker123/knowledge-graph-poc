@@ -1,7 +1,17 @@
+(.venv) (base) seb@MacBook-Pro-3 knowledge-graph-poc % pip freeze
 annotated-types==0.7.0
+anyio==4.7.0
+certifi==2024.8.30
+distro==1.9.0
+h11==0.14.0
+httpcore==1.0.7
+httpx==0.28.1
+idna==3.10
 iniconfig==2.0.0
+jiter==0.8.0
 networkx==3.4.2
 numpy==2.1.3
+openai==1.57.0
 packaging==24.2
 pandas==2.2.3
 pluggy==1.5.0
@@ -9,7 +19,10 @@ pydantic==2.10.3
 pydantic_core==2.27.1
 pytest==8.3.4
 python-dateutil==2.9.0.post0
+python-dotenv==1.0.1
 pytz==2024.2
 six==1.17.0
+sniffio==1.3.1
+tqdm==4.67.1
 typing_extensions==4.12.2
 tzdata==2024.2

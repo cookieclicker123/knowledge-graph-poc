@@ -20,7 +20,8 @@ pip install -r requirements.txt
 ## Run the tests
 
 ```bash
- pytest test/test_graph.py
+pytest test/test_graph.py
+pytest test/test_gpt_integration.py
 ```
 
 ## Requirements
