@@ -4,11 +4,11 @@ This repo is for trying out solutions to search a knowledge graph for nodes that
 ## Installation
 
 ```bash
- git clone git@github.com:cookieclicker123/knowledge-graph-poc.git
- cd knowledge-graph-poc
+git clone git@github.com:cookieclicker123/knowledge-graph-poc.git
+cd knowledge-graph-poc
 ```
 
-### Virtual environment
+### Virtual Environment Setup
 
 ```bash
 python3.11 -m venv .venv
@@ -17,21 +17,57 @@ pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-## Run the tests
+### Development Installation
 
 ```bash
+# Install package in editable mode
+pip install -e .
+```
+
+### Environment Variables
+
+```bash
+# Create .env file with your OpenAI API key
+echo "OPENAI_API_KEY=your-api-key-here" > .env
+```
+
+## Running the Application
+
+You can run the chat interface in two ways:
+
+```bash
+# Method 1 - Using the entry point
+kgraph
+
+# Method 2 - Using Python directly
+python -m src.main
+```
+
+### Example Queries
+- "Find people who speak English"
+- "Find developers at Microsoft"
+- "Show me software developers in Canada who speak Japanese"
+- "Find people who work in healthcare and speak Spanish"
+
+## Running the Tests
+
+```bash
+# Run individual test suites
 pytest test/test_graph.py
 pytest test/test_gpt_integration.py
 pytest test/test_edge_cases.py
 pytest test/test_error_handling.py
 pytest test/test_real_queries.py
+
+# Or run all tests
+pytest test/
 ```
 
-## Requirements
+## Technical Details
 
-### Graph
+### Graph Structure
 
-Using the csv test data in clean_data.csv create a knowledge graph with the following types of Nodes:
+Using the CSV test data in clean_data.csv creates a knowledge graph with the following types of Nodes:
 
 - Person
 - University
@@ -40,14 +76,20 @@ Using the csv test data in clean_data.csv create a knowledge graph with the foll
 - Industry
 - Country
 
-With the following Edges
+With the following Edges:
 
-Person -> University
-Person -> Langauge
-Person -> Industry
-Person -> Country
-Person -> Company
+- Person -> University (STUDIED_AT)
+- Person -> Language (SPEAKS)
+- Person -> Industry (WORKS_IN)
+- Person -> Country (LIVES_IN)
+- Person -> Company (WORKS_AT)
 
-### Queries
+### Features
+- Natural language query processing using GPT-4
+- Flexible language matching (handles variations like English/Inglês)
+- Company name normalization
+- Comprehensive error handling
+- Interactive chat interface
 
-1. Find all People who work at Microsoft and speak English
+
+
