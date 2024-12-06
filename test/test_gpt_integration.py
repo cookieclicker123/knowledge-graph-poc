@@ -4,6 +4,8 @@ sys.path.append(str(Path(__file__).parent.parent))
 
 import pytest
 from src.gpt_service import GPTService
+from src.graph import create_graph
+from src.query import Query
 
 def test_gpt_connection():
     """Test basic connectivity and response from GPT"""
@@ -59,3 +61,19 @@ def test_gpt_parse_complex_query():
     assert ("Person", "LIVES_IN", "Canada") in parsed_result
     assert ("Person", "SPEAKS", "English") in parsed_result
     assert ("Person", "SPEAKS", "French") in parsed_result
+
+def test_gpt_query_to_graph_results():
+    """Test end-to-end flow from natural language to graph results"""
+    # Arrange
+    gpt_service = GPTService()
+    graph_fn = create_graph("test/fixtures/clean_data.csv")
+    query_text = "Find people who speak English and work at Microsoft"
+    
+    # Act
+    parsed_conditions = gpt_service.parse_query(query_text)
+    query = Query(conditions=parsed_conditions)
+    result = graph_fn(query)
+    
+    # Assert
+    assert len(result.matches) > 0
+    assert any(p.name == "Alaa El-said" for p in result.matches)
