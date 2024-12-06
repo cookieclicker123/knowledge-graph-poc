@@ -5,6 +5,7 @@ sys.path.append(str(Path(__file__).parent.parent))
 from src.networkx_graph import create_graph
 from src.model import Query, QueryResult
 from src.schema import CSVColumn
+from src.query_parser import parse_query_intent
 import pytest
 
 def test_create_graph():
@@ -127,3 +128,18 @@ def test_complex_query_with_three_conditions():
     assert len(result.matches) > 0
     # Verify specific person that matches all conditions
     assert any(p.name == "Lauren Calderon" for p in result.matches)
+
+def test_parse_natural_language_query():
+    # Arrange
+    query_text = "Find people who speak English and work at Microsoft"
+    expected_conditions = [
+        ("Person", "SPEAKS", "English"),
+        ("Person", "WORKS_AT", "Microsoft")
+    ]
+    
+    # Act
+    parsed_query = parse_query_intent(query_text)
+    
+    # Assert
+    assert isinstance(parsed_query, Query)
+    assert parsed_query.conditions == expected_conditions
