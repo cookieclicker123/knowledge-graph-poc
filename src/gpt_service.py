@@ -1,8 +1,9 @@
 import os
 from dotenv import load_dotenv
 from openai import OpenAI
-from typing import Dict, Set, Optional
+from typing import Dict, Set, Optional, Any
 import re
+import pandas as pd
 
 load_dotenv()
 
@@ -11,38 +12,45 @@ class GPTService:
         api_key = os.getenv("OPENAI_API_KEY")
         if not api_key:
             raise ValueError("OPENAI_API_KEY environment variable not set")
-        self.client = OpenAI(api_key=api_key)
-        self.model = "gpt-4-turbo-preview"
-        self.company_mappings = self._build_company_mappings(data_path)
+        
+        try:
+            self.client = OpenAI()
+            self.model = "gpt-4-turbo-preview"
+            self.company_mappings = self._build_company_mappings(data_path)
+        except Exception as e:
+            raise ValueError(f"Failed to initialize GPT service: {str(e)}")
 
     def _build_company_mappings(self, data_path: str) -> Dict[str, str]:
         """Build mappings of company name variations from the CSV data"""
-        import pandas as pd
-        
-        df = pd.read_csv(data_path)
-        companies = set(df['company'].dropna().unique())
-        
-        mappings = {}
-        for company in companies:
-            # Full name
-            mappings[company.lower()] = company
+        try:
+            df = pd.read_csv(data_path)
+            required_columns = {'id', 'name', 'company', 'university', 'languages', 'industry', 'country'}
+            if not required_columns.issubset(df.columns):
+                raise ValueError("CSV file missing required columns")
             
-            # Without suffixes
-            base_name = re.sub(r'\s+(?:Inc|Ltd|LLC|Limited|Corp|Corporation|India|UK|US)\.?\s*$', '', company)
-            if base_name != company:
-                mappings[base_name.lower()] = company
+            companies = set(df['company'].dropna().unique())
+            mappings = {}
             
-            # Abbreviations for multi-word companies
-            words = base_name.split()
-            if len(words) > 1:
-                # Standard abbreviation (first letters)
-                abbrev = ''.join(word[0] for word in words)
-                mappings[abbrev.lower()] = company
+            for company in companies:
+                # Full name
+                mappings[company.lower()] = company
                 
-                # First word only (e.g., "Capgemini" from "Capgemini India")
-                mappings[words[0].lower()] = company
-        
-        return mappings
+                # Without suffixes
+                base_name = re.sub(r'\s+(?:Inc|Ltd|LLC|Limited|Corp|Corporation|India|UK|US)\.?\s*$', '', company)
+                if base_name != company:
+                    mappings[base_name.lower()] = company
+                
+                # Abbreviations for multi-word companies
+                words = base_name.split()
+                if len(words) > 1:
+                    abbrev = ''.join(word[0] for word in words)
+                    mappings[abbrev.lower()] = company
+                    mappings[words[0].lower()] = company
+            
+            return mappings
+            
+        except Exception as e:
+            raise ValueError(f"Failed to load company data: {str(e)}")
 
     def normalize_company_name(self, company: str) -> str:
         """Find the best matching company name from our known companies"""
@@ -59,8 +67,20 @@ class GPTService:
         
         return company
 
-    def parse_query(self, query_text: str) -> list[tuple[str, str, str]]:
+    def parse_query(self, query_text: Any) -> list[tuple[str, str, str]]:
         """Parse a natural language query into graph query conditions"""
+        # Type check
+        if not isinstance(query_text, str):
+            raise ValueError("Invalid query format: Query must be a string")
+        
+        # Empty or whitespace
+        if not query_text or not query_text.strip():
+            raise ValueError("Invalid query format: Query cannot be empty")
+        
+        # SQL injection attempt
+        if any(keyword in query_text.upper() for keyword in ["SELECT", "INSERT", "UPDATE", "DELETE", "DROP"]):
+            raise ValueError("Invalid query format: SQL-like queries not allowed")
+        
         system_prompt = """
         You are a query parser that converts natural language queries about people into structured conditions.
         Output should be a list of tuples in the format: [("Person", "RELATION", "Object")]
@@ -96,16 +116,16 @@ class GPTService:
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": query_text}
                 ],
-                temperature=0.1
+                temperature=0.1,
+                timeout=30  # Add timeout
             )
             
             result_text = response.choices[0].message.content.strip()
             
-            # Check for error message first
             if result_text.startswith("ERROR:"):
                 raise ValueError(result_text)
             
-            # Clean and evaluate the string to get the list of tuples
+            # Clean and evaluate the string
             result_text = result_text.strip('`')
             if 'python' in result_text.lower():
                 result_text = result_text.split('\n', 1)[1]
@@ -143,5 +163,7 @@ class GPTService:
             except Exception as e:
                 raise ValueError(f"Failed to parse GPT response into tuples: {str(e)}")
                 
+        except TimeoutError as e:
+            raise ValueError(f"Request timed out: {str(e)}")
         except Exception as e:
             raise ValueError(f"Failed to parse query: {str(e)}") 
