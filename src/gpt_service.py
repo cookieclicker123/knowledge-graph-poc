@@ -8,7 +8,10 @@ load_dotenv()
 
 class GPTService:
     def __init__(self, data_path: str = "test/fixtures/clean_data.csv"):
-        self.client = OpenAI()  # Will automatically use OPENAI_API_KEY from env
+        api_key = os.getenv("OPENAI_API_KEY")
+        if not api_key:
+            raise ValueError("OPENAI_API_KEY environment variable not set")
+        self.client = OpenAI(api_key=api_key)
         self.model = "gpt-4-turbo-preview"
         self.company_mappings = self._build_company_mappings(data_path)
 
