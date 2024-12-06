@@ -22,6 +22,7 @@ pip install -r requirements.txt
 ```bash
 pytest test/test_graph.py
 pytest test/test_gpt_integration.py
+pytest test/test_edge_cases.py
 ```
 
 ## Requirements

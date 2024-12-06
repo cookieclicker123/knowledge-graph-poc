@@ -4,8 +4,8 @@ sys.path.append(str(Path(__file__).parent.parent))
 
 import pytest
 from src.gpt_service import GPTService
-from src.graph import create_graph
-from src.query import Query
+from src.networkx_graph import create_graph
+from src.model import Query, QueryResult
 
 def test_gpt_connection():
     """Test basic connectivity and response from GPT"""
@@ -75,5 +75,40 @@ def test_gpt_query_to_graph_results():
     result = graph_fn(query)
     
     # Assert
+    assert isinstance(result, QueryResult)
     assert len(result.matches) > 0
     assert any(p.name == "Alaa El-said" for p in result.matches)
+    assert all(p.company == "Microsoft" for p in result.matches)
+    assert all("English" in p.languages for p in result.matches)
+
+def test_gpt_handles_unsupported_query_types():
+    """Test that GPT properly handles queries we don't support"""
+    gpt_service = GPTService()
+    query_text = "What is the average age of employees?"
+    
+    with pytest.raises(ValueError) as exc_info:
+        gpt_service.parse_query(query_text)
+    assert "Unsupported query type" in str(exc_info.value)
+
+def test_gpt_handles_multiple_companies():
+    """Test that GPT can handle queries about multiple companies"""
+    gpt_service = GPTService()
+    query_text = "Find people who work at Microsoft or Amazon"
+    parsed = gpt_service.parse_query(query_text)
+    
+    assert len(parsed) == 2
+    assert ("Person", "WORKS_AT", "Microsoft") in parsed
+    assert ("Person", "WORKS_AT", "Amazon") in parsed
+
+def test_gpt_normalizes_synonyms():
+    """Test that GPT normalizes different ways of saying the same thing"""
+    gpt_service = GPTService()
+    queries = [
+        "Find people who know English",
+        "Find English speakers",
+        "Find people who can speak English"
+    ]
+    
+    results = [gpt_service.parse_query(q) for q in queries]
+    assert all(("Person", "SPEAKS", "English") in r for r in results)
+    assert all(len(r) == 1 for r in results)  # Each should only return one condition

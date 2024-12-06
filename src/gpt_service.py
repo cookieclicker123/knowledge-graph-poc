@@ -34,17 +34,20 @@ class GPTService:
         Output should be a list of tuples in the format: [("Person", "RELATION", "Object")]
         
         Valid relations are:
-        - SPEAKS (for languages)
-        - WORKS_AT (for companies)
-        - WORKS_IN (for industries)
-        - LIVES_IN (for countries)
-        - STUDIED_AT (for universities)
+        - SPEAKS (for languages) - Use for: speaks, knows, can speak, is fluent in
+        - WORKS_AT (for companies) - Use for: employed at, works for, is at
+        - WORKS_IN (for industries) - Use for: works in, specializes in, focused on
+        - LIVES_IN (for countries) - Use for: based in, located in, resides in
+        - STUDIED_AT (for universities) - Use for: graduated from, attended, studied at
         
-        Example:
-        Input: "Find people who speak English and work at Microsoft"
-        Output: [("Person", "SPEAKS", "English"), ("Person", "WORKS_AT", "Microsoft")]
+        For unsupported operations (like counting, averaging, statistics), return exactly: "ERROR: Unsupported query type"
         
-        Important: Return ONLY the list of tuples, no additional text or explanation.
+        Examples:
+        "Find people who speak English and work at Microsoft"
+        → [("Person", "SPEAKS", "English"), ("Person", "WORKS_AT", "Microsoft")]
+        
+        "What's the average age of employees?"
+        → "ERROR: Unsupported query type"
         """
         
         try:
@@ -57,8 +60,11 @@ class GPTService:
                 temperature=0.1
             )
             
-            # Get the response text
-            result_text = response.choices[0].message.content
+            result_text = response.choices[0].message.content.strip()
+            
+            # Check for error message first
+            if result_text.startswith("ERROR:"):
+                raise ValueError(result_text)
             
             # Clean and evaluate the string to get the list of tuples
             result_text = result_text.strip('`')
