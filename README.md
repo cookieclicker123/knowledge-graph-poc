@@ -24,6 +24,7 @@ pytest test/test_graph.py
 pytest test/test_gpt_integration.py
 pytest test/test_edge_cases.py
 pytest test/test_error_handling.py
+pytest test/test_real_queries.py
 ```
 
 ## Requirements

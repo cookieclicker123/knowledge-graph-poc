@@ -4,6 +4,7 @@ from openai import OpenAI
 from typing import Dict, Set, Optional, Any
 import re
 import pandas as pd
+from itertools import chain
 
 load_dotenv()
 
@@ -17,6 +18,23 @@ class GPTService:
             self.client = OpenAI()
             self.model = "gpt-4-turbo-preview"
             self.company_mappings = self._build_company_mappings(data_path)
+            
+            # Base language mappings (static)
+            self.base_language_mappings = {
+                'inglês': 'English',
+                'anglais': 'English',
+                'français': 'French',
+                'francés': 'French',
+                'español': 'Spanish',
+                'inglés': 'English',
+                'portuguese': 'Portuguese',
+                'italiano': 'Italian',
+                'japanese': 'Japanese'
+            }
+            
+            # Dynamic language mappings from CSV
+            self.language_mappings = self._build_language_mappings(data_path)
+            self.university_mappings = self._build_university_mappings(data_path)
         except Exception as e:
             raise ValueError(f"Failed to initialize GPT service: {str(e)}")
 
@@ -52,6 +70,75 @@ class GPTService:
         except Exception as e:
             raise ValueError(f"Failed to load company data: {str(e)}")
 
+    def _build_university_mappings(self, data_path: str) -> Dict[str, str]:
+        """Build mappings for university name variations"""
+        mappings = {}
+        try:
+            df = pd.read_csv(data_path)
+            universities = set(df['university'].dropna().unique())
+            
+            for uni in universities:
+                # Full name
+                mappings[uni.lower()] = uni
+                
+                # Common abbreviations
+                if "University of California" in uni:
+                    mappings['ucla'] = uni
+                    mappings['uc los angeles'] = uni
+                
+                # Remove "University" suffix/prefix
+                base_name = re.sub(r'\s+(?:University|College|Institute|School).*$', '', uni)
+                if base_name != uni:
+                    mappings[base_name.lower()] = uni
+            
+            return mappings
+            
+        except Exception as e:
+            raise ValueError(f"Failed to build university mappings: {str(e)}")
+
+    def _build_language_mappings(self, data_path: str) -> Dict[str, str]:
+        """Build comprehensive language mappings from CSV data and base mappings"""
+        try:
+            df = pd.read_csv(data_path)
+            
+            # Get all unique languages from the CSV
+            all_languages = set(chain.from_iterable(
+                lang.split('|') for lang in df['languages'].dropna()
+            ))
+            
+            mappings = {}
+            
+            # Add base mappings
+            mappings.update(self.base_language_mappings)
+            
+            # Add reverse mappings
+            reverse_mappings = {v.lower(): k for k, v in self.base_language_mappings.items()}
+            mappings.update(reverse_mappings)
+            
+            # Add CSV languages and their variations
+            for lang in all_languages:
+                lang_lower = lang.lower()
+                # Map each language to itself and its known variations
+                mappings[lang_lower] = lang
+                # Add common variations
+                if lang_lower in ['english', 'inglês', 'anglais']:
+                    for variant in ['english', 'inglês', 'anglais']:
+                        mappings[variant] = lang
+                elif lang_lower in ['spanish', 'español', 'espanol']:
+                    for variant in ['spanish', 'español', 'espanol']:
+                        mappings[variant] = lang
+                elif lang_lower in ['french', 'français', 'francés']:
+                    for variant in ['french', 'français', 'francés']:
+                        mappings[variant] = lang
+                elif lang_lower in ['portuguese', 'português', 'portugues']:
+                    for variant in ['portuguese', 'português', 'portugues']:
+                        mappings[variant] = lang
+            
+            return mappings
+            
+        except Exception as e:
+            raise ValueError(f"Failed to build language mappings: {str(e)}")
+
     def normalize_company_name(self, company: str) -> str:
         """Find the best matching company name from our known companies"""
         company_lower = company.lower()
@@ -66,6 +153,44 @@ class GPTService:
                 return canonical_name
         
         return company
+
+    def normalize_language(self, language: str) -> str:
+        """Normalize language names using comprehensive mappings"""
+        if not language:
+            return language
+        
+        language_lower = language.lower().strip()
+        
+        # Special handling for English variations
+        if language_lower in ['english', 'inglês', 'anglais', 'ingles']:
+            return 'Inglês'  # Match exactly what's in our CSV
+        
+        # Direct lookup in mappings
+        if language_lower in self.language_mappings:
+            return self.language_mappings[language_lower]
+        
+        # Try partial matches
+        for known_lang, canonical_form in self.language_mappings.items():
+            if known_lang in language_lower or language_lower in known_lang:
+                return canonical_form
+        
+        # If no match found, return the original with title case
+        return language.title()
+
+    def normalize_university(self, university: str) -> str:
+        """Find the best matching university name"""
+        university_lower = university.lower()
+        
+        # Direct match
+        if university_lower in self.university_mappings:
+            return self.university_mappings[university_lower]
+        
+        # Partial match
+        for known_name, canonical_name in self.university_mappings.items():
+            if known_name in university_lower or university_lower in known_name:
+                return canonical_name
+        
+        return university.title()
 
     def parse_query(self, query_text: Any) -> list[tuple[str, str, str]]:
         """Parse a natural language query into graph query conditions"""
@@ -117,7 +242,7 @@ class GPTService:
                     {"role": "user", "content": query_text}
                 ],
                 temperature=0.1,
-                timeout=30  # Add timeout
+                timeout=30
             )
             
             result_text = response.choices[0].message.content.strip()
@@ -140,23 +265,23 @@ class GPTService:
                 ):
                     raise ValueError("Invalid format in GPT response")
                 
-                # Case standardization rules
-                standardization_rules = {
-                    "WORKS_IN": str.title,      # Software Development
-                    "WORKS_AT": str.title,      # Microsoft
-                    "SPEAKS": str.title,        # English
-                    "LIVES_IN": str.title,      # United States
-                    "STUDIED_AT": str.title,    # University Name
-                }
-                
-                # Apply standardization with dynamic company normalization
+                # Apply standardization one relation at a time
                 standardized_conditions = []
                 for subject, relation, obj in conditions:
-                    if relation == "WORKS_AT":
-                        obj = self.normalize_company_name(obj)
-                    if relation in standardization_rules:
-                        obj = standardization_rules[relation](obj)
-                    standardized_conditions.append((subject, relation, obj))
+                    standardized_obj = obj  # Default to original value
+                    
+                    if relation == "SPEAKS":
+                        standardized_obj = self.normalize_language(obj)
+                    elif relation == "WORKS_AT":
+                        standardized_obj = self.normalize_company_name(obj)
+                    elif relation == "STUDIED_AT":
+                        standardized_obj = self.normalize_university(obj)
+                    elif relation == "WORKS_IN":
+                        standardized_obj = obj.title()
+                    elif relation == "LIVES_IN":
+                        standardized_obj = obj.title()
+                    
+                    standardized_conditions.append((subject, relation, standardized_obj))
                 
                 return standardized_conditions
                 
